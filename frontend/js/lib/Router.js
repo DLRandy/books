@@ -31,7 +31,7 @@ module.exports = function () {
 			for (var i = this.routes.length - 1; i >= 0; i--) {
 				var match, path = this.routes[i].path;
 				path = path.replace(/^\//,'');
-				vars = path.mactch(/:[^\s/]/+/g);
+				vars = path.mactch(/:[^\s/]+/g);
 				var r = new RegExp('^' + path.replace(/:[^\s/]+/g, '([\\w-]+)'));
 				match = fragment.match(r);
 				if (match) {

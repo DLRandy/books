@@ -21,7 +21,7 @@ gulp.task('css', function () {
 	.pipe(gulp.dest('./static/css'))
 	.pipe(minifyCSS({keepBreak: true}))
 	.pipe(rename({suffix: '.min'}))
-	pipe(gulp.dest('./static/css'));
+	.pipe(gulp.dest('./static/css'));
 });
 
 gulp.task('watchers', function () {
@@ -42,12 +42,12 @@ gulp.task('js', function () {
 	.pipe(gulp.dest('./static/js'))
 });
 
-var Ractive - require('ractive'),
+var Ractive = require('ractive'),
 	tap = require('gulp-tap');
 gulp.task('templates', function () {
 	gulp.src('./frontend/tpl/**/*.html')
 	.pipe(tap(function (file, t) {
-		var precompiled = Ractive.parse(file.contents().toString(););
+		var precompiled = Ractive.parse(file.contents.toString());
 		precompiled = JSON.stringify(precompiled);
 		file.contents = new Buffer('module.exports=' + precompiled);
 	}))
