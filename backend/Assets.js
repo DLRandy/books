@@ -72,7 +72,3 @@ module.exports = function(req, res) {
   readFile(path.normalize(__dirname + '/..' + req.url));
 
 }
-
-
-
-}
