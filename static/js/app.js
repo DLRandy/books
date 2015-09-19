@@ -1,14 +1,13 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-// Home.js
 module.exports = Ractive.extend({
-	template: require('../../tpl/home'),
-	components: {
-		navigation: require('../views/Navigation'),
-		appfooter: require('../views/Footer')
-	},
-	onrender: function () {
-		console.log('Home page rendered');
-	}
+  template: require('../../tpl/home'),
+  components: {
+    navigation: require('../views/Navigation'),
+    appfooter: require('../views/Footer')
+  },
+  onrender: function() {
+    console.log('Home page rendered');
+  }
 });
 },{"../../tpl/home":10,"../views/Footer":7,"../views/Navigation":8}],2:[function(require,module,exports){
 var Router = require('./lib/Router')();
@@ -117,92 +116,71 @@ module.exports = {
   }
 }
 },{}],4:[function(require,module,exports){
-// Router.js, which is a component that acts as 
-// a front door and accepts the incoming queries
-//It analyzes the parameters of the request and 
-//decides which module of our system will serve 
-//the result
-
-module.exports = function () {
-	return {
-		routes: [],
-		add: function (path, handler) {
-			if (typeof path === 'function') {
-				handler = path;
-				path = '';
-			};
-			this.routes.push({
-				path: path,
-				handler: handler
-			});
-			return this;
-		},
-		//f is path
-		check: function (f, params) {
-			var fragment, vars;
-			if (typeof f !== 'undefined') {
-				fragment = f.replace(/^\//,'');
-
-			} else {
-				//get current browser url
-				fragment = this.getFragment();
-			};
-			for (var i = this.routes.length - 1; i >= 0; i--) {
-				var match, path = this.routes[i].path;
-				path = path.replace(/^\//,'');
-				vars = path.mactch(/:[^\s/]+/g);
-				var r = new RegExp('^' + path.replace(/:[^\s/]+/g, '([\\w-]+)'));
-				match = fragment.match(r);
-				if (match) {
-					match.shift();
-					var matchObj = {};
-					if (vars) {
-						for (var j = 0; j < vars.length; j++) {
-							var v = vars[j];
-							matchObj[v.substr(1, v.length)] = match[j];
-
-						};
-					};
-					this.routes[i].handler.applly({},
-						(params || []).concat([matchObj]));
-					return this;
-				};
-			};
-
-			return false;
-		},
-		getFragment: function () {
-			var fragment = '';
-			fragment = this.clearSlashes(decodeURI(
-				window.location.pathname + location.search));
-			fragment = fragment.repalce(/\?(.*)$/,'');
-			fragment = this.root !== '/' ? fragment.replace(this.root, '') : fragment;
-			return this.clearSlashes(fragment);
-		},
-		clearSlashes: function (path) {
-			return path.toString().repalce(/\/$/, '').replace(/^\//,'');
-		},
-		listen: function () {
-			var self = this;
-			var current = self.getFragment();
-			var fn = function () {
-				if (current !== self.getFragment()) {
-					current = self.getFragment();
-					self.check(current);
-				};
-			}
-			clearInterval(this.interval);
-			this.interval = setInterval(fn, 50);
-			return  this;
-		},
-		navigate: function (path) {
-			path = path ? path : '';
-			history.pushState(null, null, this.root + this.clearSlashes(path))
-			return this;
-
-		}
-	};
-}
+module.exports = function() {
+  return {
+    routes: [],
+    root: '/',
+    getFragment: function() {
+      var fragment = '';
+      fragment = this.clearSlashes(decodeURI(location.pathname + location.search));
+      fragment = fragment.replace(/\?(.*)$/, '');
+      fragment = this.root != '/' ? fragment.replace(this.root, '') : fragment;
+      return this.clearSlashes(fragment);
+    },
+    clearSlashes: function(path) {
+      return path.toString().replace(/\/$/, '').replace(/^\//, '');
+    },
+    add: function(re, handler) {
+      if(typeof re == 'function') {
+        handler = re;
+        re = '';
+      }
+      this.routes.push({ re: re, handler: handler});
+      return this;
+    },
+    check: function(f, params) {
+      var fragment = typeof f !== 'undefined' ? f.replace(/^\//, '') : this.getFragment(), vars;
+      for(var i=0; i<this.routes.length; i++) {
+        var match, re = this.routes[i].re;
+        re = re.replace(/^\//, '');
+        var vars = re.match(/:[^\s/]+/g);
+        var r = new RegExp('^' + re.replace(/:[^\s/]+/g, '([\\w-]+)'));
+        match = fragment.match(r);
+        if(match) {
+          match.shift();
+          var matchObj = {};
+          if(vars) {
+            for(var j=0; j<vars.length; j++) {
+              var v = vars[j];
+              matchObj[v.substr(1, v.length)] = match[j];
+            }
+          }
+          this.routes[i].handler.apply({}, (params || []).concat([matchObj]));
+          return this;
+        }
+      }
+      return false;
+    },
+    listen: function() {
+      var self = this;
+      var current = self.getFragment();
+      var fn = function() {
+        if(current !== self.getFragment()) {
+          current = self.getFragment();
+          self.check(current);
+        }
+      }
+      clearInterval(this.interval);
+      this.interval = setInterval(fn, 50);
+      return this;
+    },
+    navigate: function(path) {
+      path = path ? path : '';
+      history.pushState(null, null, this.root + this.clearSlashes(path));
+      return this;
+    }
+  }
+};
 },{}],5:[function(require,module,exports){
 
 var ajax = require('../lib/Ajax');
@@ -235,34 +213,30 @@ module.exports = Ractive.extend({
   }
 });
 },{"../lib/Ajax":3}],6:[function(require,module,exports){
-// Version.js
 var Base = require('./Base');
 module.exports = Base.extend({
-	data: {
-		url: '/api/version'
-	}
+  data: {
+    url: '/api/version'
+  }
 });
 },{"./Base":5}],7:[function(require,module,exports){
-// Footer.js
 var FooterModel = require('../models/Version');
+
 module.exports = Ractive.extend({
-	template:require('../../tpl/footer'),
-	onrender: function () {
-		var model = new FooterModel();
-		model.bindComponent(this).fetch();
-	}
-	
+  template: require('../../tpl/footer'),
+  onrender: function() {
+    var model = new FooterModel();
+    model.bindComponent(this).fetch();
+  }
 });
 },{"../../tpl/footer":9,"../models/Version":6}],8:[function(require,module,exports){
-// navigation.js
 module.exports = Ractive.extend({
-	template: require('../../tpl/navigation')
+  template: require('../../tpl/navigation')
 });
-
 },{"../../tpl/navigation":11}],9:[function(require,module,exports){
-module.exports={"v":3,"t":[{"t":7,"e":"footer","f":["Version: ",{"t":2,"r":"version"}]}]}
+module.exports = {"v":1,"t":[{"t":7,"e":"footer","f":["Version: ",{"t":2,"r":"version"}]}]}
 },{}],10:[function(require,module,exports){
-module.exports={"v":3,"t":[{"t":7,"e":"header","f":[{"t":7,"e":"navigation"}," ",{"t":7,"e":"div","a":{"class":"hero"},"f":[{"t":7,"e":"h1","f":["Node.js by example"]}]}]}," ",{"t":7,"e":"appfooter"}]}
+module.exports = {"v":1,"t":[{"t":7,"e":"header","f":[{"t":7,"e":"navigation"}," ",{"t":7,"e":"div","a":{"class":"hero"},"f":[{"t":7,"e":"h1","f":["Node.js by example"]}]}]}," ",{"t":7,"e":"appfooter"}]}
 },{}],11:[function(require,module,exports){
-module.exports={"v":3,"t":[{"t":7,"e":"nav","f":[{"t":7,"e":"ul","f":[{"t":7,"e":"li","f":[{"t":7,"e":"a","a":{"href":"#"},"f":["Home"]}]}," ",{"t":7,"e":"li","f":[{"t":7,"e":"a","a":{"href":"#"},"f":["Login"]}]}]}]}]}
+module.exports = {"v":1,"t":[{"t":7,"e":"nav","f":[{"t":7,"e":"ul","f":[{"t":7,"e":"li","f":[{"t":7,"e":"a","a":{"href":"#"},"f":["Home"]}]}," ",{"t":7,"e":"li","f":[{"t":7,"e":"a","a":{"href":"#"},"f":["Login"]}]}]}]}]}
 },{}]},{},[2])

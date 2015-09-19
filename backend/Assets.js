@@ -1,24 +1,3 @@
-// Assets.js
-//request handler.
-//mainly to read files from the hard disk and serve it to users
-
-
-//req.url points ot the current request paht
-//ex. the current request: http://localhost:9000/static/css/style.css
-//    the req.url: /static/css/style.css
-
-	
-	//chekcing whether the file exists and if not,
-	// sending a proper message
-	//error code: 4XX points to client error
-	//			  5XX points to server error
-
-	
-
-	// Sending the file's content to the browser with 
-	// correct content type
-	//the parameter file object has ext and content
-	
 var fs = require('fs');
 var path = require('path');
 var files = {};

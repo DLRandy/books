@@ -1,24 +1,21 @@
-var http = require('http'),
-	path = require('path'),
-	port = 9000,
-	host = '127.0.0.1';
+var http = require('http');
+var port = 9000;
 
-    //APIS:Reuqest Api
-var Assets = require('./backend/Assets'),
-	API = require('./backend/API'),
-	Default = require('./backend/Default');
+var Assets = require('./backend/Assets');
+var API = require('./backend/API');
+var Default = require('./backend/Default');
 
 var Router = require('./frontend/js/lib/router')();
 
 Router
 .add('static', Assets)
 .add('api', API)
-.add(Default);
+.add(Default)
 
-var process = function (req, res) {
-	Router.check(req.url, [req, res]);
+var process = function(req, res) {
+  Router.check(req.url, [req, res]);
 }
 
-    //http server. that is the entry point of our application,mainly Assets module
-    var app = http.createServer(Assets).listen(port, host);
-console.log("Listening on " + host + " : " + port);
+var app = http.createServer(process).listen(port, '127.0.0.1');
+console.log("Listening on 127.0.0.1:" + port);
+
