@@ -182,7 +182,9 @@ module.exports = function() {
   }
 };
 },{}],5:[function(require,module,exports){
-
+//serveral models share the same methods which make HTTP
+// requests to the server and get Data ,so we abstract them
+// in this file
 var ajax = require('../lib/Ajax');
 module.exports = Ractive.extend({
   data: {
