@@ -6,12 +6,98 @@ module.exports = Ractive.extend({
     appfooter: require('../views/Footer')
   },
   onrender: function() {
-    console.log('Home page rendered');
+    
   }
 });
-},{"../../tpl/home":10,"../views/Footer":7,"../views/Navigation":8}],2:[function(require,module,exports){
+},{"../../tpl/home":14,"../views/Footer":11,"../views/Navigation":12}],2:[function(require,module,exports){
+module.exports = Ractive.extend({
+  template: require('../../tpl/login'),
+  components: {
+    navigation: require('../views/Navigation'),
+    appfooter: require('../views/Footer')
+  },
+  onrender: function() {
+    var self = this;
+    this.observe('email', userModel.setter('email'));
+    this.observe('password', userModel.setter('password'));
+    this.on('login', function() {
+      userModel.login(function(error, result) {
+        if(error) {
+          self.set('error', error.error);
+        } else {
+          self.set('error', false);
+          window.location.href = '/';
+        }
+      });
+    });
+  }
+});
+},{"../../tpl/login":15,"../views/Footer":11,"../views/Navigation":12}],3:[function(require,module,exports){
+module.exports = Ractive.extend({
+  template: require('../../tpl/profile'),
+  components: {
+    navigation: require('../views/Navigation'),
+    appfooter: require('../views/Footer')
+  },
+  onrender: function() {
+    var self = this;
+    this.set(userModel.get('value'));
+    this.on('updateProfile', function() {
+      userModel.set('value.firstName', this.get('firstName'));
+      userModel.set('value.lastName', this.get('lastName'));
+      if(this.get('password') != '') {
+        userModel.set('value.password', this.get('password'));
+      }
+      userModel.save(function(error, result) {
+        if(error) {
+          self.set('error', error.error);
+        } else {
+          self.set('error', false);
+          self.set('success', 'Profile updated successfully.');
+        }
+      });
+    });
+    this.on('deleteProfile', function() {
+      if(confirm('Are you sure! Your account will be deleted permanently.')) {
+        userModel.del(function() {
+          window.location.href = '/';
+        });
+      }
+    })
+  }
+});
+},{"../../tpl/profile":17,"../views/Footer":11,"../views/Navigation":12}],4:[function(require,module,exports){
+module.exports = Ractive.extend({
+  template: require('../../tpl/register'),
+  components: {
+    navigation: require('../views/Navigation'),
+    appfooter: require('../views/Footer')
+  },
+  onrender: function() {
+    var self = this;
+    this.observe('firstName', userModel.setter('value.firstName'));
+    this.observe('lastName', userModel.setter('value.lastName'));
+    this.observe('email', userModel.setter('value.email'));
+    this.observe('password', userModel.setter('value.password'));
+    this.on('register', function() {
+      userModel.create(function(error, result) {
+        if(error) {
+          self.set('error', error.error);
+        } else {
+          self.set('error', false);
+          self.set('success', 'Registration successful. Click <a href="/login">here</a> to login.');
+        }
+      });
+    });
+  }
+});
+},{"../../tpl/register":18,"../views/Footer":11,"../views/Navigation":12}],5:[function(require,module,exports){
 var Router = require('./lib/Router')();
 var Home = require('./controllers/Home');
+var Register = require('./controllers/Register');
+var Login = require('./controllers/Login');
+var Profile = require('./controllers/Profile');
+var UserModel = require('./models/User');
 var currentPage;
 var body;
 
@@ -20,25 +106,51 @@ var showPage = function(newPage) {
   currentPage = newPage;
   body.innerHTML = '';
   currentPage.render(body);
+  currentPage.on('navigation.goto', function(e, route) {
+    Router.navigate(route);
+  });
 }
 
 window.onload = function() {
 
-  body = document.querySelector('body');
-
-  Router
-  .add('home', function() {
-    var p = new Home();
-    showPage(p);
-  })
-  .add(function() {
-    Router.navigate('home');
-  })
-  .listen()
-  .check();
+  body = document.querySelector('body .container');
+  userModel = new UserModel();
+  userModel.fetch(function(error, result) {
+    Router
+    .add('home', function() {
+      var p = new Home();
+      showPage(p);
+    })
+    .add('register', function() {
+      var p = new Register();
+      showPage(p);
+    })
+    .add('login', function() {
+      var p = new Login();
+      showPage(p);
+    })
+    .add('logout', function() {
+      userModel.logout(function(error, result) {
+        window.location.href = '/';
+      });
+    })
+    .add('profile', function() {
+      if(userModel.isLogged()) {
+        var p = new Profile();
+        showPage(p);
+      } else {
+        Router.navigate('login');
+      }      
+    })
+    .add(function() {
+      Router.navigate('home');
+    })
+    .listen()
+    .check();
+  });
 
 }
-},{"./controllers/Home":1,"./lib/Router":4}],3:[function(require,module,exports){
+},{"./controllers/Home":1,"./controllers/Login":2,"./controllers/Profile":3,"./controllers/Register":4,"./lib/Router":7,"./models/User":9}],6:[function(require,module,exports){
 module.exports = {
   request: function(ops) {
     if(typeof ops == 'string') ops = { url: ops };
@@ -115,7 +227,7 @@ module.exports = {
     return api.process(ops);
   }
 }
-},{}],4:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 module.exports = function() {
   return {
     routes: [],
@@ -181,17 +293,14 @@ module.exports = function() {
     }
   }
 };
-},{}],5:[function(require,module,exports){
-//serveral models share the same methods which make HTTP
-// requests to the server and get Data ,so we abstract them
-// in this file
+},{}],8:[function(require,module,exports){
 var ajax = require('../lib/Ajax');
 module.exports = Ractive.extend({
   data: {
     value: null,
     url: ''
   },
-  fetch: function() {
+  fetch: function(cb) {
     var self = this;
     ajax.request({
       url: self.get('url'),
@@ -199,9 +308,74 @@ module.exports = Ractive.extend({
     })
     .done(function(result) {
       self.set('value', result);
+      if(cb) {
+        cb(null, result);
+      }
     })
     .fail(function(xhr) {
-      self.fire('Error fetching ' + self.get('url'))
+      self.set('value', null);
+      if(cb) {
+        cb({ error: 'Error loading ' + self.get('url')});
+      }
+    });
+    return this;
+  },
+  create: function(cb) {
+    var self = this;
+    ajax.request({
+      url: self.get('url'),
+      method: 'POST',
+      data: this.get('value'),
+      json: true
+    })
+    .done(function(result) {
+      if(cb) {
+        cb(null, result);
+      }
+    })
+    .fail(function(xhr) {
+      if(cb) {
+        cb(JSON.parse(xhr.responseText));
+      }
+    });
+    return this;
+  },
+  save: function(cb) {
+    var self = this;
+    ajax.request({
+      url: self.get('url'),
+      method: 'PUT',
+      data: this.get('value'),
+      json: true
+    })
+    .done(function(result) {
+      if(cb) {
+        cb(null, result);
+      }
+    })
+    .fail(function(xhr) {
+      if(cb) {
+        cb(JSON.parse(xhr.responseText));
+      }
+    });
+    return this;
+  },
+  del: function(cb) {
+    var self = this;
+    ajax.request({
+      url: self.get('url'),
+      method: 'DELETE',
+      json: true
+    })
+    .done(function(result) {
+      if(cb) {
+        cb(null, result);
+      }
+    })
+    .fail(function(xhr) {
+      if(cb) {
+        cb(JSON.parse(xhr.responseText));
+      }
     });
     return this;
   },
@@ -212,16 +386,64 @@ module.exports = Ractive.extend({
       }, { init: false });
     }
     return this;
+  },
+  setter: function(key) {
+    var self = this;
+    return function(v) {
+      self.set(key, v);
+    }
   }
 });
-},{"../lib/Ajax":3}],6:[function(require,module,exports){
+},{"../lib/Ajax":6}],9:[function(require,module,exports){
+var ajax = require('../lib/Ajax');
+var Base = require('./Base');
+module.exports = Base.extend({
+  data: {
+    url: '/api/user'
+  },
+  login: function(callback) {
+    var self = this;
+    ajax.request({
+      url: this.get('url') + '/login',
+      method: 'POST',
+      data: {
+        email: this.get('email'),
+        password: this.get('password')
+      },
+      json: true
+    })
+    .done(function(result) {
+      callback(null, result);
+    })
+    .fail(function(xhr) {
+      callback(JSON.parse(xhr.responseText));
+    });
+  },
+  logout: function(callback) {
+    var self = this;
+    ajax.request({
+      url: this.get('url') + '/logout',
+      json: true
+    })
+    .done(function(result) {
+      callback(null, result);
+    })
+    .fail(function(xhr) {
+      callback(JSON.parse(xhr.responseText));
+    });
+  },
+  isLogged: function() {
+    return this.get('value.firstName') && this.get('value.lastName');
+  }
+});
+},{"../lib/Ajax":6,"./Base":8}],10:[function(require,module,exports){
 var Base = require('./Base');
 module.exports = Base.extend({
   data: {
     url: '/api/version'
   }
 });
-},{"./Base":5}],7:[function(require,module,exports){
+},{"./Base":8}],11:[function(require,module,exports){
 var FooterModel = require('../models/Version');
 
 module.exports = Ractive.extend({
@@ -231,14 +453,23 @@ module.exports = Ractive.extend({
     model.bindComponent(this).fetch();
   }
 });
-},{"../../tpl/footer":9,"../models/Version":6}],8:[function(require,module,exports){
+},{"../../tpl/footer":13,"../models/Version":10}],12:[function(require,module,exports){
 module.exports = Ractive.extend({
-  template: require('../../tpl/navigation')
+  template: require('../../tpl/navigation'),
+  onconstruct: function() {
+    this.data.isLogged = !!userModel.isLogged();
+  }
 });
-},{"../../tpl/navigation":11}],9:[function(require,module,exports){
+},{"../../tpl/navigation":16}],13:[function(require,module,exports){
 module.exports = {"v":1,"t":[{"t":7,"e":"footer","f":["Version: ",{"t":2,"r":"version"}]}]}
-},{}],10:[function(require,module,exports){
-module.exports = {"v":1,"t":[{"t":7,"e":"header","f":[{"t":7,"e":"navigation"}," ",{"t":7,"e":"div","a":{"class":"hero"},"f":[{"t":7,"e":"h1","f":["Node.js by example"]}]}]}," ",{"t":7,"e":"appfooter"}]}
-},{}],11:[function(require,module,exports){
-module.exports = {"v":1,"t":[{"t":7,"e":"nav","f":[{"t":7,"e":"ul","f":[{"t":7,"e":"li","f":[{"t":7,"e":"a","a":{"href":"#"},"f":["Home"]}]}," ",{"t":7,"e":"li","f":[{"t":7,"e":"a","a":{"href":"#"},"f":["Login"]}]}]}]}]}
-},{}]},{},[2])
+},{}],14:[function(require,module,exports){
+module.exports = {"v":1,"t":[{"t":7,"e":"header","f":[{"t":7,"e":"navigation"}]}," ",{"t":7,"e":"div","a":{"class":"hero"},"f":[{"t":7,"e":"h1","f":["Node.js by example"]}]}," ",{"t":7,"e":"appfooter"}]}
+},{}],15:[function(require,module,exports){
+module.exports = {"v":1,"t":[{"t":7,"e":"header","f":[{"t":7,"e":"navigation"}]}," ",{"t":7,"e":"div","a":{"class":"hero"},"f":[{"t":7,"e":"h1","f":["Login"]}]}," ",{"t":7,"e":"form","f":[{"t":4,"n":50,"x":{"r":["error"],"s":"_0&&_0!=\"\""},"f":[{"t":7,"e":"div","a":{"class":"error"},"f":[{"t":2,"r":"error"}]}]}," ",{"t":4,"n":50,"x":{"r":["success"],"s":"_0&&_0!=\"\""},"f":[{"t":7,"e":"div","a":{"class":"success"},"f":[{"t":3,"r":"success"}]}]},{"t":4,"n":51,"f":[{"t":7,"e":"label","a":{"for":"email"},"f":["Email"]}," ",{"t":7,"e":"input","a":{"type":"text","id":"email","value":[{"t":2,"r":"email"}]}}," ",{"t":7,"e":"label","a":{"for":"password"},"f":["Password"]}," ",{"t":7,"e":"input","a":{"type":"password","id":"password","value":[{"t":2,"r":"password"}]}}," ",{"t":7,"e":"input","a":{"type":"button","value":"login"},"v":{"click":"login"}}],"x":{"r":["success"],"s":"_0&&_0!=\"\""}}]}," ",{"t":7,"e":"appfooter"}]}
+},{}],16:[function(require,module,exports){
+module.exports = {"v":1,"t":[{"t":7,"e":"nav","f":[{"t":7,"e":"ul","f":[{"t":7,"e":"li","f":[{"t":7,"e":"a","v":{"click":{"n":"goto","a":"home"}},"f":["Home"]}]}," ",{"t":4,"n":50,"x":{"r":["isLogged"],"s":"!_0"},"f":[{"t":7,"e":"li","f":[{"t":7,"e":"a","v":{"click":{"n":"goto","a":"register"}},"f":["Register"]}]}," ",{"t":7,"e":"li","f":[{"t":7,"e":"a","v":{"click":{"n":"goto","a":"login"}},"f":["Login"]}]}]},{"t":4,"n":51,"f":[{"t":7,"e":"li","a":{"class":"right"},"f":[{"t":7,"e":"a","v":{"click":{"n":"goto","a":"logout"}},"f":["Logout"]}]}," ",{"t":7,"e":"li","a":{"class":"right"},"f":[{"t":7,"e":"a","v":{"click":{"n":"goto","a":"profile"}},"f":["Profile"]}]}],"x":{"r":["isLogged"],"s":"!_0"}}]}]}]}
+},{}],17:[function(require,module,exports){
+module.exports = {"v":1,"t":[{"t":7,"e":"header","f":[{"t":7,"e":"navigation"}]}," ",{"t":7,"e":"div","a":{"class":"hero"},"f":[{"t":7,"e":"h1","f":["Profile"]}]}," ",{"t":7,"e":"form","f":[{"t":4,"n":50,"x":{"r":["error"],"s":"_0&&_0!=\"\""},"f":[{"t":7,"e":"div","a":{"class":"error"},"f":[{"t":3,"r":"error"}]}]}," ",{"t":4,"n":50,"x":{"r":["success"],"s":"_0&&_0!=\"\""},"f":[{"t":7,"e":"div","a":{"class":"success"},"f":[{"t":3,"r":"success"}]}]}," ",{"t":7,"e":"label","a":{"for":"first-name"},"f":["First name"]}," ",{"t":7,"e":"input","a":{"type":"text","id":"first-name","value":[{"t":2,"r":"firstName"}]}}," ",{"t":7,"e":"label","a":{"for":"last-name"},"f":["Last name"]}," ",{"t":7,"e":"input","a":{"type":"text","id":"last-name","value":[{"t":2,"r":"lastName"}]}}," ",{"t":7,"e":"label","a":{"for":"password"},"f":["Change password"]}," ",{"t":7,"e":"input","a":{"type":"password","id":"password","value":[{"t":2,"r":"password"}]}}," ",{"t":7,"e":"input","a":{"type":"button","value":"update"},"v":{"click":"updateProfile"}}," ",{"t":7,"e":"input","a":{"type":"button","value":"delete account","class":"right attention"},"v":{"click":"deleteProfile"}}]}," ",{"t":7,"e":"appfooter"}]}
+},{}],18:[function(require,module,exports){
+module.exports = {"v":1,"t":[{"t":7,"e":"header","f":[{"t":7,"e":"navigation"}]}," ",{"t":7,"e":"div","a":{"class":"hero"},"f":[{"t":7,"e":"h1","f":["Register"]}]}," ",{"t":7,"e":"form","f":[{"t":4,"n":50,"x":{"r":["error"],"s":"_0&&_0!=\"\""},"f":[{"t":7,"e":"div","a":{"class":"error"},"f":[{"t":2,"r":"error"}]}]}," ",{"t":4,"n":50,"x":{"r":["success"],"s":"_0&&_0!=\"\""},"f":[{"t":7,"e":"div","a":{"class":"success"},"f":[{"t":3,"r":"success"}]}]},{"t":4,"n":51,"f":[{"t":7,"e":"label","a":{"for":"first-name"},"f":["First name"]}," ",{"t":7,"e":"input","a":{"type":"text","id":"first-name","value":[{"t":2,"r":"firstName"}]}}," ",{"t":7,"e":"label","a":{"for":"last-name"},"f":["Last name"]}," ",{"t":7,"e":"input","a":{"type":"text","id":"last-name","value":[{"t":2,"r":"lastName"}]}}," ",{"t":7,"e":"label","a":{"for":"email"},"f":["Email"]}," ",{"t":7,"e":"input","a":{"type":"text","id":"email","value":[{"t":2,"r":"email"}]}}," ",{"t":7,"e":"label","a":{"for":"password"},"f":["Password"]}," ",{"t":7,"e":"input","a":{"type":"password","id":"password","value":[{"t":2,"r":"password"}]}}," ",{"t":7,"e":"input","a":{"type":"button","value":"register"},"v":{"click":"register"}}],"x":{"r":["success"],"s":"_0&&_0!=\"\""}}]}," ",{"t":7,"e":"appfooter"}]}
+},{}]},{},[5])

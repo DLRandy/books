@@ -5,6 +5,6 @@ module.exports = Ractive.extend({
     appfooter: require('../views/Footer')
   },
   onrender: function() {
-    console.log('Home page rendered');
+    
   }
 });

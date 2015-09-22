@@ -17,5 +17,10 @@
     "gulp-uglify": "1.0.1",
     "gulp-util": "3.0.1",
     "ractive": "0.6.1"
+  },
+  "devDependencies": {
+    "cookie-session": "^1.2.0",
+    "mongodb": "^2.0.43",
+    "sha1": "^1.1.1"
   }
 }

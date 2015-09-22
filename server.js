@@ -16,6 +16,15 @@ var process = function(req, res) {
   Router.check(req.url, [req, res]);
 }
 
-var app = http.createServer(process).listen(port, '127.0.0.1');
+var session = require('cookie-session');
+var checkSession = function (req, res) {
+	session({
+		keys: ['nodejs-by-example']
+	})(req, res, function () {
+		process(req, res);
+	});
+}
+
+var app = http.createServer(checkSession).listen(port, '127.0.0.1');
 console.log("Listening on 127.0.0.1:" + port);
 
